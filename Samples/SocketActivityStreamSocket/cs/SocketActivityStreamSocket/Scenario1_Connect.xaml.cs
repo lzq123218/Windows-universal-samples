@@ -34,6 +34,32 @@ namespace SocketActivityStreamSocket
         public Scenario1_Connect()
         {
             this.InitializeComponent();
+            App.Current.Suspending += Current_Suspending;
+        }
+
+        private void Current_Suspending(object sender, Windows.ApplicationModel.SuspendingEventArgs e)
+        {
+            var deferral = e.SuspendingOperation.GetDeferral();
+            // here is where we'd transfer the open socket to the socket manager. 
+            // ...If we knew how to get the socket out of the scenario code where it lives right now.
+            if (socket != null)
+            {
+                // To demonstrate usage of CancelIOAsync async, have a pending read on the socket and call 
+                // cancel before transfering the socket. 
+                //DataReader reader = new DataReader(socket.InputStream);
+                //reader.InputStreamOptions = InputStreamOptions.Partial;
+                //var read = reader.LoadAsync(250);
+                //read.Completed += (info, status) =>
+                //{
+
+                //};
+                //await socket.CancelIOAsync();
+
+                //socket.TransferOwnership(socketId);
+                //socket = null;
+            }
+
+            deferral.Complete();
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -95,6 +121,8 @@ namespace SocketActivityStreamSocket
                     socket.EnableTransferOwnership(task.TaskId, SocketActivityConnectedStandbyAction.Wake);
                     var targetServer = new HostName(TargetServerTextBox.Text);
                     await socket.ConnectAsync(targetServer, port);
+
+#if false
                     // To demonstrate usage of CancelIOAsync async, have a pending read on the socket and call 
                     // cancel before transfering the socket. 
                     DataReader reader = new DataReader(socket.InputStream);
@@ -105,8 +133,10 @@ namespace SocketActivityStreamSocket
 
                     };
                     await socket.CancelIOAsync();
+
                     socket.TransferOwnership(socketId);
                     socket = null;
+#endif
                 }
                 ConnectButton.IsEnabled = false;
                 rootPage.NotifyUser("Connected. You may close the application", NotifyType.StatusMessage);

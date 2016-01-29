@@ -18,7 +18,7 @@ using Windows.Networking.Sockets;
 using Windows.Storage.Streams;
 using System.Text;
 using Windows.Foundation;
-
+using System.Collections.Generic;
 
 namespace StreamSocketListenerServer
 {
@@ -26,7 +26,7 @@ namespace StreamSocketListenerServer
     {
         private MainPage rootPage;
         private StreamSocketListener tcpListener;
-        private StreamSocket connectedSocket = null;
+        private List<StreamSocket> connectedSockets = null;
         private const string port = "40404";
 
         public Scenario1_Send()
@@ -40,12 +40,13 @@ namespace StreamSocketListenerServer
            StreamSocketListener sender,
            StreamSocketListenerConnectionReceivedEventArgs args)
         {
-            if (connectedSocket != null)
+            if (connectedSockets == null)
             {
-                connectedSocket.Dispose();
-                connectedSocket = null;
+                //connectedSocket.Dispose();
+                //connectedSocket = null;
+                connectedSockets = new List<StreamSocket>();
             }
-            connectedSocket = args.Socket;
+            connectedSockets.Add(args.Socket);
             await SendMessageTextBox.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
             {
                 rootPage.NotifyUser("Client has connected, go ahead and send a message...", NotifyType.StatusMessage);
@@ -65,19 +66,25 @@ namespace StreamSocketListenerServer
 
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
-            try
+            foreach (var connectedSocket in connectedSockets)
             {
-                DataWriter writer = new DataWriter(connectedSocket.OutputStream);
-                writer.WriteBytes(Encoding.UTF8.GetBytes(SendMessageTextBox.Text));
-                SendMessageTextBox.Text = "";
-                await writer.StoreAsync();
-                writer.DetachStream();
-                writer.Dispose();
+                try
+                {
+                    DataWriter writer = new DataWriter(connectedSocket.OutputStream);
+                    writer.WriteBytes(Encoding.UTF8.GetBytes(SendMessageTextBox.Text));
+                    await writer.StoreAsync();
+                    writer.DetachStream();
+                    writer.Dispose();
+                }
+                catch (Exception exception)
+                {
+                    rootPage.NotifyUser(exception.Message, NotifyType.ErrorMessage);
+                    connectedSockets.Remove(connectedSocket);
+                }
             }
-            catch(Exception exception)
-            {
-                rootPage.NotifyUser(exception.Message, NotifyType.ErrorMessage);
-            }
+
+            SendMessageTextBox.Text = "";
         }
+
     }
 }
